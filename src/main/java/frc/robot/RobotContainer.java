@@ -4,57 +4,39 @@
 
 package frc.robot;
 
-import java.util.HashMap;
-
-import org.opencv.core.Mat.Tuple2;
+import java.util.TreeSet;
 
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
+import edu.wpi.first.wpilibj.shuffleboard.WidgetType;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import frc.robot.Subsystems.Drivetrain;
+import frc.robot.Subsystems.Networking.NetworkEntry;
 import frc.robot.Subsystems.Networking.NetworkTables;
-import frc.robot.Subsystems.SwerveModule.SwerveConstructor;
-import frc.robot.Subsystems.SwerveModule.SwerveModule;
-import frc.robot.Constants.*;
 
 public class RobotContainer {
 
-  private SwerveConstructor swerveConstructor;
+  private TreeSet<NetworkEntry> temporary = new TreeSet<>();
 
-  private SwerveModule parentModule;
-
-  Tuple2[] swerveOffsets = new Tuple2[] {SwerveConstants.tmp, SwerveConstants.tmp2};
-
-  private HashMap<String, Object> temporary = new HashMap<>();
+  private Drivetrain drivetrain = new Drivetrain();
   
 
   public RobotContainer() {
     configureBindings();
-    constructSwerveModules();
+    temporary.add(new NetworkEntry("motors:", null, drivetrain.frontLeftSwerveModule.getTargetVel()));
+    for (int i=0;i<drivetrain.getIdentityMap().size();i++) {
+      String id = (String) drivetrain.getIdentityMap().keySet().toArray()[i];
 
-    temporary.put("Configured Modules?", true);
-    temporary.put("Configured?", 9999);
-    temporary.put("running!", new double[] {3,3});
-
-
-    for (int i=0;i<swerveConstructor.GetIDMap().size();i++) {
-      Object id = swerveConstructor.GetIDMap().keySet().toArray()[i];
-      Translation2d translation = (Translation2d) swerveConstructor.GetIDMap().values().toArray()[i];
-
-      temporary.put(id.toString()+"Module", translation);
+      temporary.add(new NetworkEntry(id.toString(), null, drivetrain.getModuleOffset(id)));
     }
 
+    temporary.add(new NetworkEntry("widgets built!", BuiltInWidgets.kTextView, true));
+
     NetworkTables table = constructTableTab("Swerve", temporary);
-    SmartDashboard.putNumberArray("AHHHHH", (double[]) table.getEntry("running!"));
   }
 
-  private void constructSwerveModules() {
-    swerveConstructor = new SwerveConstructor(() -> parentModule, swerveOffsets);
-
-    SmartDashboard.putNumber("X:", swerveConstructor.GetModuleOffset(1).getX());
-  }
-
-  public NetworkTables constructTableTab(String tabName, HashMap<String, ?> details) {
+  public NetworkTables constructTableTab(String tabName, TreeSet<NetworkEntry> details) {
     NetworkTables localTable = new NetworkTables(tabName, details);
     
     return localTable;
