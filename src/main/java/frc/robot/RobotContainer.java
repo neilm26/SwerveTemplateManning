@@ -6,11 +6,10 @@ package frc.robot;
 
 import java.util.TreeSet;
 
-import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
-import edu.wpi.first.wpilibj.shuffleboard.WidgetType;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import frc.robot.Constants.SwerveConstants.ModuleNames;
 import frc.robot.Subsystems.Drivetrain;
 import frc.robot.Subsystems.Networking.NetworkEntry;
 import frc.robot.Subsystems.Networking.NetworkTables;
@@ -24,7 +23,7 @@ public class RobotContainer {
 
   public RobotContainer() {
     configureBindings();
-    temporary.add(new NetworkEntry("motors:", null, drivetrain.frontLeftSwerveModule.getTargetVel()));
+    temporary.add(new NetworkEntry("motors:", null, drivetrain.getModule(ModuleNames.FRONT_LEFT).getName()));
     for (int i=0;i<drivetrain.getIdentityMap().size();i++) {
       String id = (String) drivetrain.getIdentityMap().keySet().toArray()[i];
 
@@ -33,13 +32,11 @@ public class RobotContainer {
 
     temporary.add(new NetworkEntry("widgets built!", BuiltInWidgets.kTextView, true));
 
-    NetworkTables table = constructTableTab("Swerve", temporary);
+    constructTableTab("Swerve", temporary);
   }
 
-  public NetworkTables constructTableTab(String tabName, TreeSet<NetworkEntry> details) {
-    NetworkTables localTable = new NetworkTables(tabName, details);
-    
-    return localTable;
+  public void constructTableTab(String tabName, TreeSet<NetworkEntry> details) {
+    new NetworkTables(tabName, details);
   }
 
   private void configureBindings() {}

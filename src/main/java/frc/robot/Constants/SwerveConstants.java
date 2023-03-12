@@ -16,5 +16,9 @@ public class SwerveConstants {
     public static final Translation2d FRONT_RIGHT_OFFSET = new Translation2d(xOffsetFrontLeft, yOffsetFrontLeft);
     public static final Translation2d FRONT_LEFT_OFFSET = new Translation2d(xOffsetFrontLeft, yOffsetFrontLeft);
 
+    public enum ModuleNames {
+        FRONT_LEFT,
+        FRONT_RIGHT
+    }
 
 }

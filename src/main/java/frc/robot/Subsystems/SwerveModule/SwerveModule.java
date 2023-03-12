@@ -72,6 +72,10 @@ public class SwerveModule {
         return new SwerveModuleState(initialVelo.get(), Rotation2d.fromDegrees(initialAngle.get()));
     }
 
+    public void resetHeading() {
+        initialAngle = () -> turnMotor.getAbsoluteEncoder(Type.kDutyCycle).getPosition();
+    }
+
     public double getTargetVel() {
         return targetVelo;
     }

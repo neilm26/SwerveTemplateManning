@@ -5,37 +5,53 @@
 package frc.robot.Subsystems;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.SwerveConstants;
-import frc.robot.Subsystems.SwerveModule.SwerveConstructor;
+import frc.robot.Constants.SwerveConstants.ModuleNames;
 import frc.robot.Subsystems.SwerveModule.SwerveModule;
 
 public class Drivetrain extends SubsystemBase {
   /** Creates a new Drivetrain. */  
-  public SwerveModule frontLeftSwerveModule, frontRightSwerveModule;
+  public static SwerveModule frontLeftSwerveModule;
+  public static SwerveModule frontRightSwerveModule;
   public static List<SwerveModule> preAssignedModules = new ArrayList<SwerveModule>();
   public static Map<String, Translation2d> identityMap = new HashMap<String, Translation2d>();
 
   public Drivetrain() {
-    frontLeftSwerveModule = new SwerveConstructor(0,3,
+    frontLeftSwerveModule = new SwerveModule(0,3,
               "FrontLeftSwerve", SwerveConstants.FRONT_LEFT_OFFSET);
 
-    frontRightSwerveModule = new SwerveConstructor(1,2,
+    frontRightSwerveModule = new SwerveModule(1,2,
               "FrontRightSwerve", SwerveConstants.FRONT_RIGHT_OFFSET);
+    
+    initializeAllModules();
+  }
 
-    frontLeftSwerveModule.initalize();
-    frontRightSwerveModule.initalize();  
+  private void initializeAllModules() {
+    for (ModuleNames name: ModuleNames.values()) {
+      getModule(name).initalize();
+    }
   }
 
   public List<SwerveModule> getModules() {
     return preAssignedModules;
+  }
+
+  public SwerveModule getModule(SwerveConstants.ModuleNames name) {
+    switch (name) {
+
+      case FRONT_LEFT: return frontLeftSwerveModule;
+      case FRONT_RIGHT: return frontRightSwerveModule;
+
+      default:
+        break;
+    }
+    return null;
   }
   
   public Translation2d getModuleOffset(String id) {
