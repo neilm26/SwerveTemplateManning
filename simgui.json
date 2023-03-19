@@ -10,7 +10,8 @@
   },
   "NTProvider": {
     "types": {
-      "/FMSInfo": "FMSInfo"
+      "/FMSInfo": "FMSInfo",
+      "/SmartDashboard/Drivetrain": "Subsystem"
     }
   },
   "NetworkTables": {
@@ -23,14 +24,86 @@
       }
     },
     "transitory": {
-      "Shuffleboard": {
-        "Swerve": {
+      "LiveWindow": {
+        ".status": {
           "open": true
         },
         "open": true
       },
-      "SmartDashboard": {
+      "Shuffleboard": {
+        "Swerve": {
+          "FRONT_LEFT": {
+            "changeables: ": {
+              "open": true
+            },
+            "open": true
+          },
+          "FRONT_RIGHT": {
+            "changeables: ": {
+              "open": true
+            },
+            "open": true
+          },
+          "Modules": {
+            "open": true
+          },
+          "changeables: ": {
+            "open": true
+          },
+          "open": true,
+          "target angle": {
+            "open": true
+          },
+          "values": {
+            "open": true
+          }
+        },
         "open": true
+      },
+      "SmartDashboard": {
+        "Drivetrain": {
+          "open": true
+        },
+        "E": {
+          "open": true
+        },
+        "FRONT_LEFT": {
+          "open": true
+        },
+        "FRONT_RIGHT": {
+          "open": true
+        },
+        "FrontLeftSwerve": {
+          "open": true
+        },
+        "FrontRightSwerve": {
+          "open": true
+        },
+        "Shuffleboard": {
+          "Swerve": {
+            "FRONT_LEFT": {
+              "open": true
+            },
+            "FRONT_RIGHT": {
+              "open": true
+            },
+            "open": true
+          },
+          "open": true
+        },
+        "open": true,
+        "publisher": {
+          "Shuffleboard": {
+            "Swerve": {
+              "open": true
+            },
+            "open": true
+          },
+          "open": true
+        },
+        "widgets built!": {
+          "open": true
+        }
       }
     }
   }

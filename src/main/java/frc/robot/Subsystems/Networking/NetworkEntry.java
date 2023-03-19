@@ -1,37 +1,51 @@
 package frc.robot.Subsystems.Networking;
 
+import java.util.Map;
+
+import edu.wpi.first.networktables.GenericEntry;
+import edu.wpi.first.networktables.GenericPublisher;
+import edu.wpi.first.networktables.GenericSubscriber;
+import edu.wpi.first.networktables.NetworkTableValue;
+import edu.wpi.first.networktables.PubSubOption;
+import edu.wpi.first.wpilibj.shuffleboard.BuiltInLayouts;
 import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
+import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardLayout;
+import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
 
-public class NetworkEntry implements Comparable<NetworkEntry>{
-    
+public class NetworkEntry {
+
+    private GenericEntry entry;
     private String entryName;
-    private Object val;
-    private BuiltInWidgets widget;
-    private int thisID;
-    public static int ID = 0;
 
-    public NetworkEntry(String entryName, BuiltInWidgets widget, Object val) {
-        this.entryName = entryName;
-        this.val = val;
-        this.widget = widget;
-        thisID = ID += 1;
+    public NetworkEntry(ShuffleboardTab tab, String entryName, BuiltInWidgets widget, Map<String, Object> properties,
+            Object val, String parentName) {
+        try {
+            if (parentName != null) {
+                ShuffleboardLayout layout = tab.getLayout(parentName, BuiltInLayouts.kList).withSize(2, 2);
+                entry = layout.add(entryName,
+                        val).withWidget(widget).withProperties(properties).getEntry();
+            } else {
+                entry = tab.add(entryName,
+                        val).withWidget(widget).getEntry();
+            }
+
+            this.entryName = entryName;
+
+        } catch (IllegalArgumentException | NullPointerException e) {
+            // TODO: handle exception
+            System.out.println("Widget cannot be constructed! " + e.toString());
+        }
     }
 
-    public Object GetValue() {
-        return val;
+    public Object getNetworkTblValue() {
+        return entry.get().getValue();
     }
 
-    public BuiltInWidgets GetWidget() {
-        return widget;
+    public GenericEntry getEntry() {
+        return entry;
     }
 
-    public String GetName() {
+    public String getEntryName() {
         return entryName;
-    }
-
-    @Override
-    public int compareTo(NetworkEntry arg0) {
-        // TODO Auto-generated method stub
-        return thisID;
     }
 }
