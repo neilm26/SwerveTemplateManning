@@ -4,26 +4,32 @@
 
 package frc.robot;
 
-import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
-import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
+import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import frc.robot.Commands.DriverControls;
 import frc.robot.Subsystems.Drivetrain;
-import frc.robot.Subsystems.Networking.NetworkEntry;
+import frc.robot.Subsystems.Networking.NetworkTableContainer;
 
 public class RobotContainer {
+  private XboxController driverController = new XboxController(0);
   private Drivetrain drivetrain = new Drivetrain();
+
+  //Commands
+  private DriverControls driverControls = new DriverControls(drivetrain, 
+                                          driverController::getLeftX, 
+                                          driverController::getLeftY);
 
   public RobotContainer() {
     configureBindings();
 
-    new NetworkEntry(Shuffleboard.getTab("Swerve"),
-        "Widgets built: ",
-        BuiltInWidgets.kBooleanBox, null,
-        true, null);
+    NetworkTableContainer.insertGlobalEntries();
+
+    //kinda hard to read.
   }
 
   private void configureBindings() {
+    drivetrain.setDefaultCommand(driverControls);
   }
 
   public Command getAutonomousCommand() {

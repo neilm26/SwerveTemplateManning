@@ -4,6 +4,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Supplier;
 
+import org.opencv.core.Mat.Tuple2;
+
 import com.ctre.phoenix.motorcontrol.can.TalonFXConfiguration;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonFX;
 import com.revrobotics.CANSparkMax;
@@ -13,23 +15,26 @@ import com.revrobotics.SparkMaxAbsoluteEncoder.Type;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
-import edu.wpi.first.networktables.GenericEntry;
-import edu.wpi.first.networktables.NetworkTableValue;
+import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Utilities;
 import frc.robot.Constants.SwerveConstants;
 import frc.robot.Constants.SwerveConstants.ModuleNames;
 import frc.robot.Subsystems.Drivetrain;
 import frc.robot.Subsystems.Networking.NetworkEntry;
+import frc.robot.Subsystems.Networking.NetworkTableContainer;
 
 public class SwerveModule extends SubsystemBase{
     
     private WPI_TalonFX driveMotor;
-    private CANSparkMax turnMotor;
+    private CANSparkMax turnMotor; //change to SRX and Victors on Loki
+    private Encoder cimCoder;
     
 
     private PIDController drivePID = SwerveConstants.DRIVE_PID_CONTROLLER;
@@ -37,10 +42,6 @@ public class SwerveModule extends SubsystemBase{
 
     private Supplier<Double> initialVelo, initialAngle;
 
-    private double targetVelo;
-
-    private double currAngle;
-    private double currVelo;
     private double prevTargetHeading;
 
     private ModuleNames moduleName;
@@ -49,16 +50,21 @@ public class SwerveModule extends SubsystemBase{
     private TalonFXConfiguration driveConfiguration = new TalonFXConfiguration();
     private ShuffleboardTab tab = Shuffleboard.getTab("Swerve");
 
-    private NetworkEntry swerveModuleHeading, headingSlider;
+    private NetworkEntry swerveModuleHeading, headingSlider, moduleOutput;
 
-    public SwerveModule(int driveId, int turnId, ModuleNames moduleName, Translation2d offset) {        
+    public SwerveModule(int driveId, int turnId, ModuleNames moduleName, Translation2d offset, Tuple2<Integer> encoderPins) {        
         driveMotor = new WPI_TalonFX(driveId, SwerveConstants.CANIVORENAME);
         turnMotor = new CANSparkMax(turnId, MotorType.kBrushless);
+        
+        cimCoder = new Encoder(encoderPins.get_0(), encoderPins.get_1());
+        cimCoder.setDistancePerPulse(Math.PI*SwerveConstants.WHEEL_DIAMETER/SwerveConstants.TICKS_PER_REV_CIM_CODER);
 
         initialVelo = () -> driveMotor.getSelectedSensorVelocity();
         initialAngle = () -> turnMotor.getAbsoluteEncoder(Type.kDutyCycle).getPosition();
         this.moduleName = moduleName;
         this.offset = offset;
+
+        initalize();
     }
 
     public void initalize() {
@@ -68,6 +74,7 @@ public class SwerveModule extends SubsystemBase{
         
         Drivetrain.preAssignedModules.add(this);
         Drivetrain.identityMap.put(moduleName, offset);
+        Drivetrain.moduleWheelPos.put(moduleName, getWheelPosition());
 
         configureSwerveModule();
 
@@ -81,6 +88,16 @@ public class SwerveModule extends SubsystemBase{
             new NetworkEntry(tab, 
             "target heading view", 
             BuiltInWidgets.kGyro, null, headingSlider.getNetworkTblValue(), moduleName.toString());
+
+            moduleOutput = 
+            new NetworkEntry(tab, 
+            "motor output velocity", 
+            BuiltInWidgets.kTextView, null, initialVelo.get(), moduleName.toString());
+
+            NetworkTableContainer.entries.putAll(
+                Map.of(headingSlider.toString(), headingSlider,
+                        swerveModuleHeading.toString(), swerveModuleHeading,
+                        moduleOutput.toString(), moduleOutput));
    
         } 
         catch (NullPointerException e) {
@@ -103,16 +120,20 @@ public class SwerveModule extends SubsystemBase{
     public void driveTo(SwerveModuleState moduleState) {
         if (moduleState.speedMetersPerSecond != 0) {
 
-            targetVelo = moduleState.speedMetersPerSecond;
-            swerveModuleHeading.getEntry().setDouble(moduleState.angle.getDegrees());
+            setTargetVel(moduleState.speedMetersPerSecond);
+            setTargetAng(moduleState.angle.getDegrees());
         }
         else {
-            targetVelo = 0;
+            moduleOutput.getEntry().setDouble(0);
         }
     }
 
-    public SwerveModuleState getCurrentState() {
-        return new SwerveModuleState(initialVelo.get(), Rotation2d.fromDegrees(initialAngle.get()));
+    public SwerveModuleState getCurrentState(double speed, double angle) {
+        return new SwerveModuleState(speed, Rotation2d.fromDegrees(angle));
+    }
+
+    public SwerveModulePosition getWheelPosition() {
+        return new SwerveModulePosition(cimCoder.getDistance(), Rotation2d.fromDegrees(initialAngle.get()));
     }
 
     public void resetHeading() {
@@ -120,11 +141,11 @@ public class SwerveModule extends SubsystemBase{
     }
 
     public double getTargetVel() {
-        return targetVelo;
+        return moduleOutput.getEntry().getDouble(initialVelo.get());
     }
 
     public void setTargetVel(double newTargetVel) {
-        targetVelo = newTargetVel;
+        moduleOutput.getEntry().setDouble(newTargetVel);
     }
 
     public double getTargetAng() {

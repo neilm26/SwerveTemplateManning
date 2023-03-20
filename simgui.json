@@ -11,7 +11,14 @@
   "NTProvider": {
     "types": {
       "/FMSInfo": "FMSInfo",
-      "/SmartDashboard/Drivetrain": "Subsystem"
+      "/LiveWindow/Ungrouped/PIDController[1]": "PIDController",
+      "/LiveWindow/Ungrouped/PIDController[2]": "PIDController",
+      "/LiveWindow/Ungrouped/Pigeon 2 [5]": "Gyro",
+      "/LiveWindow/Ungrouped/Scheduler": "Scheduler",
+      "/LiveWindow/Ungrouped/Talon FX [0]": "Motor Controller",
+      "/LiveWindow/Ungrouped/Talon FX [1]": "Motor Controller",
+      "/SmartDashboard/Drivetrain": "Subsystem",
+      "/SmartDashboard/PIDController[3]": "PIDController"
     }
   },
   "NetworkTables": {
@@ -35,8 +42,7 @@
           "FRONT_LEFT": {
             "changeables: ": {
               "open": true
-            },
-            "open": true
+            }
           },
           "FRONT_RIGHT": {
             "changeables: ": {
@@ -77,6 +83,9 @@
           "open": true
         },
         "FrontRightSwerve": {
+          "open": true
+        },
+        "PIDController[3]": {
           "open": true
         },
         "Shuffleboard": {
