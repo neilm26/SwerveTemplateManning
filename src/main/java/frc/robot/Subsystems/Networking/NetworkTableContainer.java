@@ -27,6 +27,12 @@ public class NetworkTableContainer {
                         "Override Target Heading",
                         BuiltInWidgets.kToggleButton,
                         null,
-                        false, null)));
+                        false, null),
+                "Forward Output",
+                new NetworkEntry(Shuffleboard.getTab("Swerve"),
+                        "Forward Output",
+                        BuiltInWidgets.kGraph,
+                        null,
+                        0, null)));
     }
 }

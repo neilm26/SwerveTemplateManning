@@ -6,7 +6,10 @@ import java.util.function.Supplier;
 
 import org.opencv.core.Mat.Tuple2;
 
+import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.can.TalonFXConfiguration;
+import com.ctre.phoenix.motorcontrol.can.TalonSRX;
+import com.ctre.phoenix.motorcontrol.can.TalonSRXConfiguration;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonFX;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkMaxLowLevel.MotorType;
@@ -17,28 +20,28 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.wpilibj.AnalogEncoder;
 import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Utilities;
 import frc.robot.Constants.SwerveConstants;
-import frc.robot.Constants.SwerveConstants.ModuleNames;
 import frc.robot.Subsystems.Drivetrain;
 import frc.robot.Subsystems.Networking.NetworkEntry;
 import frc.robot.Subsystems.Networking.NetworkTableContainer;
 
-public class SwerveModule extends SubsystemBase{
+public class SwerveModule extends SubsystemBase implements SwerveConstants {
     
-    private WPI_TalonFX driveMotor;
-    private CANSparkMax turnMotor; //change to SRX and Victors on Loki
+    private TalonSRX driveMotor;
+    private TalonSRX turnMotor; //change to SRX and Victors on Loki
     private Encoder cimCoder;
+    private AnalogEncoder analogEncoder;
     
 
-    private PIDController drivePID = SwerveConstants.DRIVE_PID_CONTROLLER;
-    private PIDController angularPID = SwerveConstants.ANGULAR_PID_CONTROLLER;
+    private PIDController drivePID = DRIVE_PID_CONTROLLER;
+    private PIDController angularPID = ANGULAR_PID_CONTROLLER;
 
     private Supplier<Double> initialVelo, initialAngle;
 
@@ -47,20 +50,23 @@ public class SwerveModule extends SubsystemBase{
     private ModuleNames moduleName;
     private Translation2d offset;
 
-    private TalonFXConfiguration driveConfiguration = new TalonFXConfiguration();
+    private TalonSRXConfiguration driveConfiguration = new TalonSRXConfiguration();
     private ShuffleboardTab tab = Shuffleboard.getTab("Swerve");
 
-    private NetworkEntry swerveModuleHeading, headingSlider, moduleOutput;
+    private NetworkEntry swerveModuleTargetHeading, headingSlider, moduleOutput, moduleState, swerveModuleHeading;
 
     public SwerveModule(int driveId, int turnId, ModuleNames moduleName, Translation2d offset, Tuple2<Integer> encoderPins) {        
-        driveMotor = new WPI_TalonFX(driveId, SwerveConstants.CANIVORENAME);
-        turnMotor = new CANSparkMax(turnId, MotorType.kBrushless);
+        driveMotor = new TalonSRX(driveId);
+        turnMotor = new TalonSRX(turnId);
         
-        cimCoder = new Encoder(encoderPins.get_0(), encoderPins.get_1());
-        cimCoder.setDistancePerPulse(Math.PI*SwerveConstants.WHEEL_DIAMETER/SwerveConstants.TICKS_PER_REV_CIM_CODER);
+        //cimCoder = new Encoder(encoderPins.get_0(), encoderPins.get_1());
+        
+        //cimCoder.setDistancePerPulse(Math.PI*SwerveConstants.WHEEL_DIAMETER/SwerveConstants.TICKS_PER_REV_CIM_CODER);
+
+        analogEncoder = new AnalogEncoder(encoderPins.get_0());
 
         initialVelo = () -> driveMotor.getSelectedSensorVelocity();
-        initialAngle = () -> turnMotor.getAbsoluteEncoder(Type.kDutyCycle).getPosition();
+        initialAngle = () -> ticksToAngle(analogEncoder.getAbsolutePosition()); //needs to be changed.
         this.moduleName = moduleName;
         this.offset = offset;
 
@@ -73,7 +79,6 @@ public class SwerveModule extends SubsystemBase{
                              angularPID); 
         
         Drivetrain.preAssignedModules.add(this);
-        Drivetrain.identityMap.put(moduleName, offset);
         Drivetrain.moduleWheelPos.put(moduleName, getWheelPosition());
 
         configureSwerveModule();
@@ -84,7 +89,7 @@ public class SwerveModule extends SubsystemBase{
             "slider", 
             BuiltInWidgets.kNumberSlider, Map.of("min",0,"max",360), initialAngle.get(), moduleName.toString());
 
-            swerveModuleHeading = 
+            swerveModuleTargetHeading = 
             new NetworkEntry(tab, 
             "target heading view", 
             BuiltInWidgets.kGyro, null, headingSlider.getNetworkTblValue(), moduleName.toString());
@@ -94,10 +99,22 @@ public class SwerveModule extends SubsystemBase{
             "motor output velocity", 
             BuiltInWidgets.kTextView, null, initialVelo.get(), moduleName.toString());
 
+            moduleState = 
+            new NetworkEntry(tab, 
+            "module state", 
+            BuiltInWidgets.kTextView, null, "", moduleName.toString());
+
+            swerveModuleHeading = 
+            new NetworkEntry(tab, 
+            "current heading view", 
+            BuiltInWidgets.kGyro, null, initialAngle.get(), moduleName.toString());
+
             NetworkTableContainer.entries.putAll(
                 Map.of(headingSlider.toString(), headingSlider,
-                        swerveModuleHeading.toString(), swerveModuleHeading,
-                        moduleOutput.toString(), moduleOutput));
+                        swerveModuleTargetHeading.toString(), swerveModuleTargetHeading,
+                        moduleOutput.toString(), moduleOutput,
+                        moduleState.toString(), moduleState,
+                        swerveModuleHeading.toString(), swerveModuleHeading));
    
         } 
         catch (NullPointerException e) {
@@ -106,7 +123,7 @@ public class SwerveModule extends SubsystemBase{
     }
 
     private void configureSwerveModule() {
-        driveConfiguration.closedloopRamp = 0.8;
+        driveConfiguration.closedloopRamp = 0.2;
 
         Utilities.attemptToConfigure(driveMotor.configAllSettings(driveConfiguration), 
                     "Cannot calibrate initial settings");
@@ -128,16 +145,31 @@ public class SwerveModule extends SubsystemBase{
         }
     }
 
-    public SwerveModuleState getCurrentState(double speed, double angle) {
-        return new SwerveModuleState(speed, Rotation2d.fromDegrees(angle));
+    public double ticksToAngle(double ticks) {
+        double angle = ticks % TICKS_PER_REV_ANALOG_CODER;
+
+        double result = (angle / (TICKS_PER_REV_ANALOG_CODER /2))*180;
+
+        if (result > 180) {
+            result -= 360;
+        }
+
+        return result;
+    }
+
+    public void easyDrive(double drive) {
+        driveMotor.set(ControlMode.PercentOutput, drive);
+    }
+    public void easyTurn (double turn) {
+        turnMotor.set(ControlMode.PercentOutput, turn);
     }
 
     public SwerveModulePosition getWheelPosition() {
-        return new SwerveModulePosition(cimCoder.getDistance(), Rotation2d.fromDegrees(initialAngle.get()));
+        return new SwerveModulePosition(analogEncoder.getDistance(), Rotation2d.fromDegrees(initialAngle.get()));
     }
 
     public void resetHeading() {
-        initialAngle = () -> turnMotor.getAbsoluteEncoder(Type.kDutyCycle).getPosition();
+        initialAngle = () -> ticksToAngle(analogEncoder.getAbsolutePosition());
     }
 
     public double getTargetVel() {
@@ -149,21 +181,27 @@ public class SwerveModule extends SubsystemBase{
     }
 
     public double getTargetAng() {
-        return swerveModuleHeading.getEntry().getDouble(initialAngle.get());
+        return swerveModuleTargetHeading.getEntry().getDouble(initialAngle.get());
     }
 
     public void setTargetAng(double newTargetAng) {
-        swerveModuleHeading.getEntry().setDouble(newTargetAng);
+        swerveModuleTargetHeading.getEntry().setDouble(newTargetAng);
     }
 
-    public String getName() {
-        return moduleName.toString();
+    public ModuleNames getModuleName() {
+        return moduleName;
     }
 
     public double[] getModuleOffset() {
         double[] vectorArray2d = new double[] {offset.getX(), offset.getY()};
 
         return vectorArray2d;
+    }
+
+    public void updateModuleState(SwerveModuleState state) {
+        if (state != null) {
+            moduleState.setNetworkEntryValue(state.toString());
+        }
     }
 
     @Override

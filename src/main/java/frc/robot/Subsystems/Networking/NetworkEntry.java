@@ -37,6 +37,12 @@ public class NetworkEntry {
         return entry.get().getValue();
     }
 
+    public void setNetworkEntryValue(Object value) {
+        if (getNetworkTblValue().getClass() == value.getClass()){
+            entry.setValue(value);
+        }
+    }
+
     public GenericEntry getEntry() {
         return entry;
     }
