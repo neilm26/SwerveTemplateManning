@@ -27,4 +27,49 @@ public class Utilities {
 
         return angle = angle < 0 ? angle+=360 : angle;
     }
+    
+    public static double constrain(double value, double min, double max) {
+		if(value < min) {
+			return min;
+		}else if(value > max) {
+			return max;
+		}
+
+
+		return value;
+	}
+	
+	public static double constrain(double value, double max) {
+		if(value < 0) {
+			return 0;
+		}else if(value > max) {
+			return max;
+		}
+		return value;
+	}
+	
+	public static double withinValue(double value, double min, double max) {
+		if(value < max && value > min) {
+			return value;
+		}else {
+			return 0;
+		}
+	}
+	
+	public static double notWithinValue(double value, double min, double max) {
+		if(value < max && value > min) {
+			return 0;
+		}else {
+			return value;
+		}
+	}
+	
+	public static boolean within(double value, double min, double max) {
+		return (value < max && value > min);
+	}
+	
+	public static boolean notWithin(double value, double min, double max) {
+		return (value > max || value < min);
+	}
+	
 }

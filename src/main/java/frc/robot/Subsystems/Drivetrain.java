@@ -5,13 +5,9 @@
 package frc.robot.Subsystems;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.TreeMap;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -20,8 +16,8 @@ import org.opencv.core.Mat.Tuple2;
 import com.ctre.phoenix.sensors.WPI_Pigeon2;
 
 import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
@@ -30,55 +26,63 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.Utilities;
-import frc.robot.Constants.SensorConstants;
 import frc.robot.Constants.SwerveConstants;
-import frc.robot.Subsystems.Networking.NetworkTableContainer;
 import frc.robot.Subsystems.SwerveModule.SwerveModule;
 
 public class Drivetrain extends SubsystemBase implements SwerveConstants {
-  /** Creates a new Drivetrain. */  
+  /** Creates a new Drivetrain. */
   public static SwerveModule frontLeftSwerveModule, frontRightSwerveModule, backLeftSwerveModule, backRightSwerveModule;
   public static List<SwerveModule> preAssignedModules = new ArrayList<SwerveModule>();
 
   public static Map<ModuleNames, SwerveModuleState> stateMap = new HashMap<>();
   public static Map<ModuleNames, SwerveModulePosition> moduleWheelPos = new HashMap<ModuleNames, SwerveModulePosition>();
 
-  
-
   private SwerveDriveKinematics driveKinematics;
   private SwerveDriveOdometry driveOdometry;
   private ChassisSpeeds chassisSpeeds;
-
+  private ProfiledPIDController angularPID = ANGULAR_PID_CONTROLLER; //defaults.
+  private PIDController drivePID = DRIVE_PID_CONTROLLER;
   private WPI_Pigeon2 pigeon2;
 
   public Drivetrain() {
-    frontRightSwerveModule = new SwerveModule(3,5,
-              ModuleNames.FRONT_RIGHT, FRONT_RIGHT_OFFSET, new Tuple2<Integer>(2, 1));
+    frontRightSwerveModule = new SwerveModule(3, 6,
+        ModuleNames.FRONT_RIGHT,
+        FRONT_RIGHT_OFFSET,
+        () -> HOME_ANALOG_ENC_POS_FRONT_RIGHT,
+        new Tuple2<Integer>(0, 1));
 
-    frontLeftSwerveModule = new SwerveModule(4,0,
-              ModuleNames.FRONT_LEFT, FRONT_LEFT_OFFSET, new Tuple2<Integer>(3, 0));
+    frontLeftSwerveModule = new SwerveModule(5, 2,
+        ModuleNames.FRONT_LEFT,
+        FRONT_LEFT_OFFSET,
+        () -> HOME_ANALOG_ENC_POS_FRONT_LEFT,
+        new Tuple2<Integer>(1, 7));
 
-    backLeftSwerveModule = new SwerveModule(1,2,
-              ModuleNames.BACK_LEFT, BACK, new Tuple2<Integer>(4, 5));
+    backLeftSwerveModule = new SwerveModule(1, 4,
+        ModuleNames.BACK_LEFT,
+        BACK,
+        () -> HOME_ANALOG_ENC_POS_FRONT_LEFT, //change to backleft!
+        new Tuple2<Integer>(4, 5));
 
     // backRightSwerveModule = new SwerveModule(6,7,
-    //           ModuleNames.BACK_RIGHT, BACK, new Tuple2<Integer>(6, 7));
-    
-    //pigeon2 = new WPI_Pigeon2(SensorConstants.PIGEON_ID);
-    
+    // ModuleNames.BACK_RIGHT, BACK, new Tuple2<Integer>(6, 7));
+
+    // pigeon2 = new WPI_Pigeon2(SensorConstants.PIGEON_ID);
+
+    SmartDashboard.putData("angularPID", angularPID);
+    SmartDashboard.putData("drivePID", drivePID);
+
     initializeAllModules();
   }
 
   private void initializeAllModules() {
-    SmartDashboard.putData(new PIDController(0, 0, 0));
     try {
       driveKinematics = new SwerveDriveKinematics(OFFSET_ARRAY);
-      // driveOdometry = new SwerveDriveOdometry(driveKinematics, 
-      //                 new Rotation2d(getRobotHeading()), 
-      //                 moduleWheelPos.values().toArray(new SwerveModulePosition[moduleWheelPos.size()]));
+      // driveOdometry = new SwerveDriveOdometry(driveKinematics,
+      // new Rotation2d(getRobotHeading()),
+      // moduleWheelPos.values().toArray(new
+      // SwerveModulePosition[moduleWheelPos.size()]));
       setCentralMotion(new ChassisSpeeds(0, 0, 0));
-                      
+
     } catch (NullPointerException e) {
       DriverStation.reportError("Cannot initialize modules! Please verify that module name(s) exist!", true);
     }
@@ -86,10 +90,6 @@ public class Drivetrain extends SubsystemBase implements SwerveConstants {
 
   public SwerveDriveKinematics getKinematics() {
     return driveKinematics;
-  }
-
-  public Map<ModuleNames, SwerveModuleState> getSwerveStates() {
-    return stateMap;
   }
 
   public SwerveDriveOdometry getOdometry() {
@@ -101,24 +101,30 @@ public class Drivetrain extends SubsystemBase implements SwerveConstants {
   }
 
   public void setCentralMotion(ChassisSpeeds chassisSpeeds) {
-    this.chassisSpeeds = chassisSpeeds; 
+    this.chassisSpeeds = chassisSpeeds;
+
+    SwerveModuleState[] states = driveKinematics.toSwerveModuleStates(this.chassisSpeeds);
+
+    SwerveDriveKinematics.desaturateWheelSpeeds(states, MAX_SPEED);
 
     stateMap = IntStream.range(0, ModuleNames.values().length).boxed().collect(Collectors.toMap(
-                i->ModuleNames.values()[i], 
-                i->driveKinematics.toSwerveModuleStates(this.chassisSpeeds)[i]));
+        i -> ModuleNames.values()[i],
+        i -> states[i]));
   }
 
   public List<SwerveModule> getModules() {
     return preAssignedModules;
   }
-  
 
   public SwerveModule getModule(ModuleNames name) {
     switch (name) {
 
-      case FRONT_LEFT: return frontLeftSwerveModule;
-      case FRONT_RIGHT: return frontRightSwerveModule;
-      case BACK_LEFT: return backLeftSwerveModule;
+      case FRONT_LEFT:
+        return frontLeftSwerveModule;
+      case FRONT_RIGHT:
+        return frontRightSwerveModule;
+      case BACK_LEFT:
+        return backLeftSwerveModule;
 
       default:
         break;
@@ -126,11 +132,26 @@ public class Drivetrain extends SubsystemBase implements SwerveConstants {
     return null;
   }
 
+  public SwerveModuleState updateModuleState(double speed, double orientation, SwerveModule module) {
+    SwerveModuleState state = new SwerveModuleState(speed, Rotation2d.fromDegrees(orientation));
+    if (state != null) {
+      module.getModuleState().setNetworkEntryValue(state.toString());
+      stateMap.replace(module.getModuleName(), state);
+    }
+    return state;
+  }
+
+  public SwerveModuleState getModuleState(ModuleNames moduleName) {
+    return stateMap.getOrDefault(moduleName, null);
+  }
+
   @Override
   public void periodic() {
     // This method will be called once per scheduler run
-    for (SwerveModule module: getModules()) { 
-        module.updateModuleState(stateMap.getOrDefault(module.getModuleName(), null));
+    for (SwerveModule module : getModules()) {
+      // try and update each module's state unless it cannot be found, then return an
+      // empty module state.
+      module.updateDrivePIDs(drivePID, angularPID);
     }
   }
 }

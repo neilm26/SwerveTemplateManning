@@ -7,39 +7,41 @@ package frc.robot.Commands;
 import java.util.Objects;
 import java.util.function.Supplier;
 
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.wpilibj2.command.CommandBase;
 import frc.robot.Utilities;
 import frc.robot.Constants.SwerveConstants.ModuleNames;
 import frc.robot.Subsystems.Drivetrain;
-import frc.robot.Subsystems.Networking.NetworkEntry;
 import frc.robot.Subsystems.Networking.NetworkTableContainer;
 import frc.robot.Subsystems.SwerveModule.SwerveModule;
 
 public class DriverControls extends CommandBase {
   /** Creates a new DriverControls. */
   private Drivetrain drivetrain;
-  private Supplier<Double> leftXAxis, leftYAxis, rightXAxis, leftTrigger, rightTrigger;
+  private Supplier<Double> rightXAxis, leftXAxis, leftYAxis, leftTrigger, rightTrigger;
 
-  private double angularOrientation=0, vXOutput=0, vYOutput=0;
+  private SwerveModule frontLeft, frontRight, backLeft;
 
-  public DriverControls(Drivetrain drivetrain, 
-                        Supplier<Double> leftXAxis, 
-                        Supplier<Double> leftYAxis, 
-                        Supplier<Double> rightXAxis,
-                        Supplier<Double> leftTrigger,
-                        Supplier<Double> rightTrigger) {
+  private double vXOutput = 0, vYOutput = 0, angularOrientation = 0;
+
+  public DriverControls(Drivetrain drivetrain,
+      Supplier<Double> rightXAxis,
+      Supplier<Double> leftXAxis,
+      Supplier<Double> leftYAxis,
+      Supplier<Double> leftTrigger,
+      Supplier<Double> rightTrigger) {
     // Use addRequirements() here to declare subsystem dependencies.
     this.drivetrain = drivetrain;
 
+    this.rightXAxis = rightXAxis;
     this.leftXAxis = leftXAxis;
     this.leftYAxis = leftYAxis;
-    this.rightXAxis = rightXAxis;
     this.leftTrigger = leftTrigger;
     this.rightTrigger = rightTrigger;
+
+    frontLeft = drivetrain.getModule(ModuleNames.FRONT_LEFT);
+    frontRight = drivetrain.getModule(ModuleNames.FRONT_RIGHT);
+    backLeft = drivetrain.getModule(ModuleNames.BACK_LEFT);
 
     addRequirements(drivetrain);
   }
@@ -52,36 +54,40 @@ public class DriverControls extends CommandBase {
   // Called every time the scheduler runs while the command is scheduled.
   @Override
   public void execute() {
-    //vYOutput = Math.sqrt(Math.pow(leftXAxis.get(),2)+Math.pow(leftYAxis.get(), 2));
-    vYOutput = leftTrigger.get()-rightTrigger.get();
+    // vYOutput = Math.sqrt(Math.pow(leftXAxis.get(),2)+Math.pow(leftYAxis.get(),
+    // 2));
+    vYOutput = leftTrigger.get() - rightTrigger.get();
     vXOutput = rightXAxis.get();
 
-    boolean overrideTargetHeading = (Boolean)  NetworkTableContainer.entries.get("Override Target Heading").getNetworkTblValue();
-
-    //different ways of doing the same thing.
+    // different ways of doing the same thing.
     NetworkTableContainer.entries.get("Forward Output").setNetworkEntryValue(vYOutput);
 
     angularOrientation = (Double) Objects.requireNonNullElse(
-        Utilities.convertAxesToDegrees(leftXAxis.get(), leftYAxis.get()),angularOrientation);
+        Utilities.convertAxesToDegrees(leftXAxis.get(), leftYAxis.get()), angularOrientation);
 
-    if (overrideTargetHeading) {
-      for (SwerveModule module: drivetrain.getModules()) {
-          module.setTargetAng(angularOrientation);
-      }
-      drivetrain.getModule(ModuleNames.FRONT_RIGHT).easyDrive(vYOutput);
-      drivetrain.getModule(ModuleNames.FRONT_RIGHT).easyTurn(vXOutput);
+    for (SwerveModule module : drivetrain.getModules()) {
+      module.setTargetAng(angularOrientation);
+    }
 
-      drivetrain.getModule(ModuleNames.FRONT_LEFT).easyDrive(vYOutput);
-      drivetrain.getModule(ModuleNames.FRONT_LEFT).easyTurn(vXOutput);
+    // frontLeft.easyMotion(vYOutput, vXOutput);
+    // frontRight.easyMotion(vYOutput, vXOutput);
+    // backLeft.easyMotion(vYOutput, vXOutput);
 
-      drivetrain.getModule(ModuleNames.BACK_LEFT).easyDrive(vYOutput);
-      drivetrain.getModule(ModuleNames.BACK_LEFT).easyTurn(vXOutput);
+    SwerveModuleState FRstate = drivetrain.updateModuleState(vYOutput, angularOrientation, frontRight);
+    SwerveModuleState FLstate = drivetrain.updateModuleState(vYOutput, angularOrientation, frontLeft);
+
+    Boolean overrideControls = (Boolean) NetworkTableContainer.entries.get("Override Target Heading")
+        .getNetworkTblValue();
+    if (overrideControls == false) {
+      frontRight.setDesiredState(FRstate);
+      frontLeft.setDesiredState(FLstate);
     }
   }
 
   // Called once the command ends or is interrupted.
   @Override
-  public void end(boolean interrupted) {}
+  public void end(boolean interrupted) {
+  }
 
   // Returns true when the command should end.
   @Override

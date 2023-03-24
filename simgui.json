@@ -18,7 +18,9 @@
       "/LiveWindow/Ungrouped/Talon FX [0]": "Motor Controller",
       "/LiveWindow/Ungrouped/Talon FX [1]": "Motor Controller",
       "/SmartDashboard/Drivetrain": "Subsystem",
-      "/SmartDashboard/PIDController[3]": "PIDController"
+      "/SmartDashboard/PIDController[3]": "PIDController",
+      "/SmartDashboard/angularPID": "PIDController",
+      "/SmartDashboard/drivePID": "PIDController"
     }
   },
   "NetworkTables": {

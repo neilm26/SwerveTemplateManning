@@ -27,6 +27,8 @@ public class NetworkEntry {
 
             this.entryName = entryName;
 
+            NetworkTableContainer.entries.put(entryName, this);
+
         } catch (IllegalArgumentException | NullPointerException e) {
             // TODO: handle exception
             System.out.println("Widget cannot be constructed! " + e.toString());
