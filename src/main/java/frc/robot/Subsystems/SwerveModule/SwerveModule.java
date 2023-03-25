@@ -69,8 +69,7 @@ public class SwerveModule extends SubsystemBase implements SwerveConstants {
         analogEncoder = new AnalogEncoder(encoderPins.get_0());
 
         initialVelo = () -> driveMotor.getSelectedSensorVelocity();
-        initialAngle = () -> SwerveMath.clamp(analogEncoder.getAbsolutePosition() - analogEncoder.getPositionOffset())
-                * 360; // needs to be changed.
+        initialAngle = () -> getModuleAngle();
         this.moduleName = moduleName;
         this.offset = offset;
         this.encoderOffset = encoderOffset.get();
@@ -132,15 +131,6 @@ public class SwerveModule extends SubsystemBase implements SwerveConstants {
         this.angularPID = angularPID;
     }
 
-    public void driveTo(double targetAngle) {
-        // double out = -angularPID.calculate(getAbsoluteAngularPositionOffsetted(),
-        // SwerveMath.findFastestTurnDirection(getAbsoluteAngularPositionOffsetted(),
-        // targetAngle)/360);
-        // SmartDashboard.putNumber("out", out);
-
-        // turnMotor.set(ControlMode.PercentOutput, out);
-    }
-
     public void easyMotion(double drive, double turn) {
         driveMotor.set(ControlMode.PercentOutput, drive);
         turnMotor.set(ControlMode.PercentOutput, turn);
@@ -148,6 +138,10 @@ public class SwerveModule extends SubsystemBase implements SwerveConstants {
 
     public SwerveModulePosition getWheelPosition() {
         return new SwerveModulePosition(analogEncoder.getDistance(), Rotation2d.fromDegrees(initialAngle.get()));
+    }
+
+    public double getModuleAngle() {
+        return SwerveMath.clamp(analogEncoder.getAbsolutePosition() - encoderOffset) * 360;
     }
 
     public double getTargetVel() {
@@ -176,11 +170,13 @@ public class SwerveModule extends SubsystemBase implements SwerveConstants {
 
     public void setDesiredState(SwerveModuleState currState) {
         // there is no selected sensor yet...
+        setTargetAng(currState.angle.getDegrees());
+
         final double driveOutput = drivePID.calculate(driveMotor.getSelectedSensorVelocity(),
                 currState.speedMetersPerSecond);
         final double driveFF = driveFeedForward.calculate(currState.speedMetersPerSecond);
         final double[] constrainedTurning = SwerveMath.findFastestTurnDirection(
-                SwerveMath.clamp(analogEncoder.getAbsolutePosition() - encoderOffset) * 360,
+                getModuleAngle(),
                 currState.angle.getDegrees(), driveOutput);
 
         final double turnOutput = angularPID.calculate(constrainedTurning[0] / 360);
@@ -202,8 +198,7 @@ public class SwerveModule extends SubsystemBase implements SwerveConstants {
                 .getNetworkTblValue();
 
         double currTargetHeading = headingSlider.getEntry().getDouble(0);
-        swerveModuleHeading.getEntry().setDouble(
-                SwerveMath.clamp(analogEncoder.getAbsolutePosition() - encoderOffset) * 360);
+        swerveModuleHeading.getEntry().setDouble(getModuleAngle());
                 
         if (overrideControls) {
             setTargetAng(currTargetHeading);

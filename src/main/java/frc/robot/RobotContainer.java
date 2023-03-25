@@ -6,10 +6,16 @@ package frc.robot;
 
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.wpilibj.event.BooleanEvent;
+import edu.wpi.first.wpilibj.event.EventLoop;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Commands.DriverControls;
+import frc.robot.Commands.OrientateModules;
 import frc.robot.Constants.SwerveConstants;
 import frc.robot.Subsystems.Drivetrain;
 import frc.robot.Subsystems.Networking.NetworkTableContainer;
@@ -21,10 +27,14 @@ public class RobotContainer implements SwerveConstants {
   //Commands
   private DriverControls driverControls = new DriverControls(drivetrain, 
                                           driverController::getRightX,
-                                          driverController::getLeftX, 
-                                          driverController::getLeftY,
                                           driverController::getLeftTriggerAxis,
                                           driverController::getRightTriggerAxis);
+                                          
+  private OrientateModules orientateModules = new OrientateModules(drivetrain, 
+                                              driverController::getLeftX, 
+                                              driverController::getLeftY);  
+  
+  private final EventLoop eventLoop = new EventLoop();
 
   public RobotContainer() {
     NetworkTableContainer.insertGlobalEntries();
@@ -37,6 +47,14 @@ public class RobotContainer implements SwerveConstants {
 
   private void configureBindings() {
     drivetrain.setDefaultCommand(driverControls);
+
+    BooleanEvent pointToEvent = new BooleanEvent(eventLoop, 
+            () -> Utilities.notWithin(driverController.getLeftX(), -0.1, 0.1)
+            || Utilities.notWithin(driverController.getLeftY(), -0.1, 0.1)).debounce(0.1);
+    
+    Trigger pointToTrigger = pointToEvent.castTo(Trigger::new);
+
+    pointToTrigger.whileTrue(orientateModules);
   }
 
   private void configureDriveRelative() {
@@ -59,5 +77,9 @@ public class RobotContainer implements SwerveConstants {
 
   public Command getAutonomousCommand() {
     return Commands.print("No autonomous command configured");
+  }
+
+  public void pollEvent() {
+    eventLoop.poll();
   }
 }

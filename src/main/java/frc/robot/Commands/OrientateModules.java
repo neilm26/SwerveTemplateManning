@@ -15,26 +15,21 @@ import frc.robot.Subsystems.Drivetrain;
 import frc.robot.Subsystems.Networking.NetworkTableContainer;
 import frc.robot.Subsystems.SwerveModule.SwerveModule;
 
-public class DriverControls extends CommandBase {
-  /** Creates a new DriverControls. */
+public class OrientateModules extends CommandBase {
+  /** Creates a new OrientateModules. */
+  private Supplier<Double>  leftXAxis, leftYAxis;
   private Drivetrain drivetrain;
-  private Supplier<Double> rightXAxis, leftTrigger, rightTrigger;
 
   private SwerveModule frontLeft, frontRight, backLeft;
-  private SwerveModuleState FRstate, FLstate;
 
-  private double vXOutput = 0, vYOutput = 0;
+  private double angularOrientation=0;
 
-  public DriverControls(Drivetrain drivetrain,
-      Supplier<Double> rightXAxis,
-      Supplier<Double> leftTrigger,
-      Supplier<Double> rightTrigger) {
+  public OrientateModules(Drivetrain drivetrain, Supplier<Double> leftXAxis,
+    Supplier<Double> leftYAxis) {
     // Use addRequirements() here to declare subsystem dependencies.
     this.drivetrain = drivetrain;
-
-    this.rightXAxis = rightXAxis;
-    this.leftTrigger = leftTrigger;
-    this.rightTrigger = rightTrigger;
+    this.leftXAxis = leftXAxis;
+    this.leftYAxis = leftYAxis;
 
     frontLeft = drivetrain.getModule(ModuleNames.FRONT_LEFT);
     frontRight = drivetrain.getModule(ModuleNames.FRONT_RIGHT);
@@ -45,37 +40,30 @@ public class DriverControls extends CommandBase {
 
   // Called when the command is initially scheduled.
   @Override
-  public void initialize() {
-  }
+  public void initialize() {}
 
   // Called every time the scheduler runs while the command is scheduled.
   @Override
   public void execute() {
-    // vYOutput = Math.sqrt(Math.pow(leftXAxis.get(),2)+Math.pow(leftYAxis.get(),
-    // 2));
-    vYOutput = rightTrigger.get()-leftTrigger.get();
-    vXOutput = rightXAxis.get();
+    angularOrientation = (Double) Objects.requireNonNullElse(
+      Utilities.convertAxesToDegrees(leftXAxis.get(), leftYAxis.get()), angularOrientation);
+    
+    SwerveModuleState FRstate = drivetrain.updateModuleState(1, angularOrientation, frontRight);
+    SwerveModuleState FLstate = drivetrain.updateModuleState(1, angularOrientation, frontLeft);
 
-    // different ways of doing the same thing.
-    NetworkTableContainer.entries.get("Forward Output").setNetworkEntryValue(vYOutput);
+    Boolean overrideControls = (Boolean) NetworkTableContainer.entries.get("Override Target Heading")
+        .getNetworkTblValue();
 
-    if (Math.abs(vXOutput)>0.1) {
-      FRstate = drivetrain.updateModuleState(vYOutput, 45, frontRight);
-      FLstate = drivetrain.updateModuleState(vYOutput, -45, frontLeft);
-    }
-    else {
-      FRstate = drivetrain.updateModuleState(vYOutput, frontRight.getModuleAngle(), frontRight);
-      FLstate = drivetrain.updateModuleState(vYOutput, frontLeft.getModuleAngle(), frontLeft);
+    if (overrideControls == false) {
+      frontRight.setDesiredState(FRstate);
+      frontLeft.setDesiredState(FLstate);
     }
 
-    frontRight.setDesiredState(FRstate);
-    frontLeft.setDesiredState(FLstate);
   }
 
   // Called once the command ends or is interrupted.
   @Override
-  public void end(boolean interrupted) {
-  }
+  public void end(boolean interrupted) {}
 
   // Returns true when the command should end.
   @Override

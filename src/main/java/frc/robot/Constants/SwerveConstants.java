@@ -10,11 +10,8 @@ public interface SwerveConstants {
     public int MODULE_COUNT = 4;
     public String CANIVORENAME = "canivore1";
 
-    public double xOffsetFrontRight = 0.381; // example value
-    public double yOffsetFrontRight = 0.381; // example value
-
-    public double xOffsetFrontLeft = -0.381; // example value
-    public double yOffsetFrontLeft = 0.381; // example value
+    public double WHEEL_BASE = 50.8/100; //cm to m
+    public double TRACK_WIDTH = 50.8/100;
 
     public double WHEEL_DIAMETER = 3; // (inches)
     public double TICKS_PER_REV_CIM_CODER = 1024;
@@ -23,8 +20,6 @@ public interface SwerveConstants {
     public double HOME_ANALOG_ENC_POS_FRONT_RIGHT = -0.06944444444;
 
     public double HOME_ANALOG_ENC_POS_FRONT_LEFT = 0.1111111;
-
-    public double A = -0.06944444;
 
     public double DESIRED_VEL_X_AXIS = 5.0; // m/s left-right
     public double DESIRED_VEL_Y_AXIS = 5.0; // m/s up-down
@@ -35,14 +30,16 @@ public interface SwerveConstants {
     //Driving encoder gear of module MK1 is 48 teeth.
  
 
-    public Translation2d FRONT_RIGHT_OFFSET = new Translation2d(xOffsetFrontRight, yOffsetFrontRight);
-    public Translation2d FRONT_LEFT_OFFSET = new Translation2d(xOffsetFrontLeft, yOffsetFrontLeft);
-    public Translation2d BACK = new Translation2d(xOffsetFrontLeft, yOffsetFrontLeft);
+    public Translation2d FRONT_RIGHT_OFFSET = new Translation2d(WHEEL_BASE/2, TRACK_WIDTH/2);
+    public Translation2d FRONT_LEFT_OFFSET = new Translation2d(WHEEL_BASE/2, -TRACK_WIDTH/2);
+    public Translation2d BACK_RIGHT_OFFSET = new Translation2d(-WHEEL_BASE/2, TRACK_WIDTH/2);
+    public Translation2d BACK_LEFT_OFFSET = new Translation2d(-WHEEL_BASE/2, -TRACK_WIDTH/2);
 
-    public Translation2d[] OFFSET_ARRAY = new Translation2d[] { FRONT_LEFT_OFFSET, FRONT_RIGHT_OFFSET, BACK, BACK };
+
+    public Translation2d[] OFFSET_ARRAY = new Translation2d[] {FRONT_LEFT_OFFSET, FRONT_RIGHT_OFFSET, BACK_LEFT_OFFSET, BACK_RIGHT_OFFSET};
 
     public PIDController DRIVE_PID_CONTROLLER = new PIDController(1, 0, 0);
-    public ProfiledPIDController ANGULAR_PID_CONTROLLER = new ProfiledPIDController(2, 0.05, 0, 
+    public ProfiledPIDController ANGULAR_PID_CONTROLLER = new ProfiledPIDController(3, 0.08, 0.056, 
                             new TrapezoidProfile.Constraints(MAX_SPEED, MAX_ACCEL));
     public SimpleMotorFeedforward TURN_FEEDFORWARD = new SimpleMotorFeedforward(1, 0.5);
     public SimpleMotorFeedforward DRIVE_FEEDFORWARD = new SimpleMotorFeedforward(1, 0.5);
