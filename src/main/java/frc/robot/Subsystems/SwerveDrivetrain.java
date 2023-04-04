@@ -18,6 +18,7 @@ import com.ctre.phoenix.sensors.WPI_Pigeon2;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
@@ -26,10 +27,11 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.Constants.SensorConstants;
 import frc.robot.Constants.SwerveConstants;
 import frc.robot.Subsystems.SwerveModule.SwerveModule;
 
-public class Drivetrain extends SubsystemBase implements SwerveConstants {
+public class SwerveDrivetrain extends SubsystemBase implements SwerveConstants {
   /** Creates a new Drivetrain. */
   public static SwerveModule frontLeftSwerveModule, frontRightSwerveModule, backLeftSwerveModule, backRightSwerveModule;
   public static List<SwerveModule> preAssignedModules = new ArrayList<SwerveModule>();
@@ -44,29 +46,26 @@ public class Drivetrain extends SubsystemBase implements SwerveConstants {
   private PIDController drivePID = DRIVE_PID_CONTROLLER;
   private WPI_Pigeon2 pigeon2;
 
-  public Drivetrain() {
+  public SwerveDrivetrain() {
     frontRightSwerveModule = new SwerveModule(3, 6,
         ModuleNames.FRONT_RIGHT,
-        FRONT_RIGHT_OFFSET,
         () -> HOME_ANALOG_ENC_POS_FRONT_RIGHT,
-        new Tuple2<Integer>(0, 1));
+        new Tuple2<Integer>(4, 4));
 
-    frontLeftSwerveModule = new SwerveModule(5, 2,
+    frontLeftSwerveModule = new SwerveModule(7, 8,
         ModuleNames.FRONT_LEFT,
-        FRONT_LEFT_OFFSET,
         () -> HOME_ANALOG_ENC_POS_FRONT_LEFT,
-        new Tuple2<Integer>(1, 7));
+        new Tuple2<Integer>(5, 6));
 
-    backLeftSwerveModule = new SwerveModule(1, 4,
+    backLeftSwerveModule = new SwerveModule(4, 1,
         ModuleNames.BACK_LEFT,
-        BACK_LEFT_OFFSET,
-        () -> HOME_ANALOG_ENC_POS_FRONT_LEFT, //change to backleft!
-        new Tuple2<Integer>(4, 5));
+        () -> -0.0, //change to backleft!
+        new Tuple2<Integer>(1, 3));
 
     // backRightSwerveModule = new SwerveModule(6,7,
     // ModuleNames.BACK_RIGHT, BACK, new Tuple2<Integer>(6, 7));
 
-    // pigeon2 = new WPI_Pigeon2(SensorConstants.PIGEON_ID);
+    pigeon2 = new WPI_Pigeon2(SensorConstants.PIGEON_ID);
 
     SmartDashboard.putData("angularPID", angularPID);
     SmartDashboard.putData("drivePID", drivePID);

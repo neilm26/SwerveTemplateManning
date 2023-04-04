@@ -6,6 +6,8 @@ package frc.robot;
 
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.event.BooleanEvent;
 import edu.wpi.first.wpilibj.event.EventLoop;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -14,26 +16,34 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import frc.robot.Commands.ChassisControl;
 import frc.robot.Commands.DriverControls;
 import frc.robot.Commands.OrientateModules;
 import frc.robot.Constants.SwerveConstants;
-import frc.robot.Subsystems.Drivetrain;
+import frc.robot.Subsystems.SwerveDrivetrain;
 import frc.robot.Subsystems.Networking.NetworkTableContainer;
+import frc.robot.Subsystems.SwerveModule.SwerveModule;
 
 public class RobotContainer implements SwerveConstants {
   private CommandXboxController driverController = new CommandXboxController(0);
-  private Drivetrain drivetrain = new Drivetrain();
+  private SwerveDrivetrain drivetrain = new SwerveDrivetrain();
 
-  //Commands
-  private DriverControls driverControls = new DriverControls(drivetrain, 
-                                          driverController::getRightX,
-                                          driverController::getLeftTriggerAxis,
-                                          driverController::getRightTriggerAxis);
-                                          
-  private OrientateModules orientateModules = new OrientateModules(drivetrain, 
-                                              driverController::getLeftX, 
-                                              driverController::getLeftY);  
-  
+  // Commands
+  private DriverControls driverControls = new DriverControls(drivetrain,
+      driverController::getLeftX,
+      driverController::getLeftY,
+      driverController::getLeftTriggerAxis,
+      driverController::getRightTriggerAxis);
+
+  private OrientateModules orientateModules = new OrientateModules(drivetrain,
+      driverController::getLeftTriggerAxis,
+      driverController::getRightTriggerAxis);
+
+  private ChassisControl chassisControl = new ChassisControl(drivetrain,
+      driverController::getLeftX,
+      driverController::getLeftY, 
+      () -> driverController.getRawAxis(2));
+
   private final EventLoop eventLoop = new EventLoop();
 
   public RobotContainer() {
@@ -41,37 +51,28 @@ public class RobotContainer implements SwerveConstants {
 
     configureDriveRelative();
     configureBindings();
-
-    //kinda hard to read.
   }
 
   private void configureBindings() {
-    drivetrain.setDefaultCommand(driverControls);
+    drivetrain.setDefaultCommand(chassisControl);
 
-    BooleanEvent pointToEvent = new BooleanEvent(eventLoop, 
-            () -> Utilities.notWithin(driverController.getLeftX(), -0.1, 0.1)
-            || Utilities.notWithin(driverController.getLeftY(), -0.1, 0.1)).debounce(0.1);
-    
-    Trigger pointToTrigger = pointToEvent.castTo(Trigger::new);
+    // BooleanEvent pointToEvent = new BooleanEvent(eventLoop,
+    //     () -> Utilities.notWithin(driverController.getRightX(), -0.1, 0.1))
+    //     .debounce(0.1);
 
-    pointToTrigger.whileTrue(orientateModules);
+    // Trigger pointToTrigger = pointToEvent.castTo(Trigger::new);
+
+    // pointToTrigger.whileTrue(orientateModules);
   }
 
-  private void configureDriveRelative() {
+  public void configureDriveRelative() {
+    // so far redundant.
+    // ChassisSpeeds needs to be tested eventually.
     boolean isFieldCentric = (Boolean) NetworkTableContainer.entries.get("Field Centric").getNetworkTblValue();
-    if (isFieldCentric) {
-      drivetrain.setCentralMotion(ChassisSpeeds.fromFieldRelativeSpeeds(
-              DESIRED_VEL_X_AXIS,
-              DESIRED_VEL_Y_AXIS,
-              DESIRED_RAD_SPEED, 
-              Rotation2d.fromDegrees(drivetrain.getRobotHeading())));
-    }
-    else {
-      drivetrain.setCentralMotion(new ChassisSpeeds(
-              DESIRED_VEL_X_AXIS,
-              DESIRED_VEL_Y_AXIS,
-              DESIRED_RAD_SPEED
-      ));
+    SmartDashboard.putBoolean("FieldCentric", isFieldCentric);
+
+    for (SwerveModule module : drivetrain.getModules()) {
+      module.setDesiredState(new SwerveModuleState(0, Rotation2d.fromDegrees(180.0)));
     }
   }
 

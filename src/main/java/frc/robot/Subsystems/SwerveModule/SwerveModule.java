@@ -5,6 +5,7 @@ import java.util.function.Supplier;
 
 import org.opencv.core.Mat.Tuple2;
 
+import com.ctre.phoenix.ErrorCode;
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix.motorcontrol.can.TalonSRXConfiguration;
@@ -16,8 +17,10 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.wpilibj.AnalogEncoder;
+import edu.wpi.first.wpilibj.AnalogInput;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Encoder;
+import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
@@ -25,7 +28,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Utilities;
 import frc.robot.Constants.SwerveConstants;
-import frc.robot.Subsystems.Drivetrain;
+import frc.robot.Subsystems.SwerveDrivetrain;
 import frc.robot.Subsystems.Networking.NetworkEntry;
 import frc.robot.Subsystems.Networking.NetworkTableContainer;
 
@@ -44,10 +47,7 @@ public class SwerveModule extends SubsystemBase implements SwerveConstants {
 
     private Supplier<Double> initialVelo, initialAngle;
 
-    private double prevTargetHeading;
-
     private ModuleNames moduleName;
-    private Translation2d offset;
     private double encoderOffset;
 
     private TalonSRXConfiguration driveConfiguration = new TalonSRXConfiguration();
@@ -57,7 +57,7 @@ public class SwerveModule extends SubsystemBase implements SwerveConstants {
 
     private NetworkEntry swerveModuleTargetHeading, headingSlider, moduleOutput, moduleState, swerveModuleHeading;
 
-    public SwerveModule(int driveId, int turnId, ModuleNames moduleName, Translation2d offset,
+    public SwerveModule(int driveId, int turnId, ModuleNames moduleName,
             Supplier<Double> encoderOffset, Tuple2<Integer> encoderPins) {
         driveMotor = new TalonSRX(driveId);
         turnMotor = new TalonSRX(turnId);
@@ -71,7 +71,6 @@ public class SwerveModule extends SubsystemBase implements SwerveConstants {
         initialVelo = () -> driveMotor.getSelectedSensorVelocity();
         initialAngle = () -> getModuleAngle();
         this.moduleName = moduleName;
-        this.offset = offset;
         this.encoderOffset = encoderOffset.get();
 
         initalize();
@@ -82,8 +81,8 @@ public class SwerveModule extends SubsystemBase implements SwerveConstants {
         updateDrivePIDs(drivePID,
                 angularPID);
 
-        Drivetrain.preAssignedModules.add(this);
-        Drivetrain.moduleWheelPos.put(moduleName, getWheelPosition());
+        SwerveDrivetrain.preAssignedModules.add(this);
+        SwerveDrivetrain.moduleWheelPos.put(moduleName, getWheelPosition());
 
         configureSwerveModule();
 
@@ -170,7 +169,9 @@ public class SwerveModule extends SubsystemBase implements SwerveConstants {
 
     public void setDesiredState(SwerveModuleState currState) {
         // there is no selected sensor yet...
+        SmartDashboard.putNumber("encoder" + moduleName.toString(), getModuleAngle());
         setTargetAng(currState.angle.getDegrees());
+        swerveModuleHeading.getEntry().setDouble(getModuleAngle());
 
         final double driveOutput = drivePID.calculate(driveMotor.getSelectedSensorVelocity(),
                 currState.speedMetersPerSecond);
@@ -186,25 +187,23 @@ public class SwerveModule extends SubsystemBase implements SwerveConstants {
         driveMotor.set(ControlMode.PercentOutput, constrainedTurning[1]);
     }
 
-    public double[] getModuleOffset() {
-        double[] vectorArray2d = new double[] { offset.getX(), offset.getY() };
+    public boolean throwLostEncoderException() {
+        Utilities.attemptToConfigureThrow(ErrorCode.SensorNotPresent, String.valueOf(analogEncoder.getChannel()));
+        return true;
+    }
 
-        return vectorArray2d;
+    public void singlePointTo() {
+        double currTargetHeading = headingSlider.getEntry().getDouble(0);
+        swerveModuleHeading.getEntry().setDouble(getModuleAngle());
+
+        setTargetAng(currTargetHeading);
+        SwerveModuleState state = new SwerveModuleState(0, Rotation2d.fromDegrees(currTargetHeading));
+
+        setDesiredState(state);
     }
 
     @Override
     public void periodic() {
-        Boolean overrideControls = (Boolean) NetworkTableContainer.entries.get("Override Target Heading")
-                .getNetworkTblValue();
-
-        double currTargetHeading = headingSlider.getEntry().getDouble(0);
         swerveModuleHeading.getEntry().setDouble(getModuleAngle());
-                
-        if (overrideControls) {
-            setTargetAng(currTargetHeading);
-            SwerveModuleState state = new SwerveModuleState(0, Rotation2d.fromDegrees(currTargetHeading));
-
-            setDesiredState(state);
-        }
     }
 }
