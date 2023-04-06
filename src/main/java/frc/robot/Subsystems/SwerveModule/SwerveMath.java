@@ -1,5 +1,6 @@
 package frc.robot.Subsystems.SwerveModule;
 
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.Utilities;
 import frc.robot.Constants.SwerveConstants;
 
@@ -24,11 +25,14 @@ public class SwerveMath implements SwerveConstants {
     public static double[] findFastestTurnDirection(double currAngle, double targetAngle, double speed) {
         double dir =  targetAngle % 360 - currAngle % 360; //only applies if angles are not clamped between 0-360
         double clampedSpeed = Utilities.constrain(speed, -1, 1);
+        SmartDashboard.putNumber("dir", dir);
+        SmartDashboard.putNumber("target", targetAngle);
+        SmartDashboard.putNumber("current", currAngle);
         if (Math.abs(dir) >= 180) { //if conditional is valid, we inverse control
             dir = -(Math.signum(dir) * 360) + dir; //the inverse of the direction (signum)
             clampedSpeed *= -1; //inverse speed as well so it remains relative to field.
         }
-        return new double[] { dir, clampedSpeed };
+        return new double[] { dir, 0 };
     }
 
     public static double clamp(double encPos) {

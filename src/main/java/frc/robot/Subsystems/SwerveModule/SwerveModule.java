@@ -57,10 +57,12 @@ public class SwerveModule extends SubsystemBase implements SwerveConstants {
 
     private NetworkEntry swerveModuleTargetHeading, headingSlider, moduleOutput, moduleState, swerveModuleHeading;
 
-    public SwerveModule(int driveId, int turnId, ModuleNames moduleName,
+    public SwerveModule(int driveId, int turnId, boolean isReversed, ModuleNames moduleName,
             Supplier<Double> encoderOffset, Tuple2<Integer> encoderPins) {
         driveMotor = new TalonSRX(driveId);
         turnMotor = new TalonSRX(turnId);
+
+        driveMotor.setInverted(isReversed);
 
         // cimCoder = new Encoder(encoderPins.get_0(), encoderPins.get_1());
 
@@ -115,7 +117,10 @@ public class SwerveModule extends SubsystemBase implements SwerveConstants {
     }
 
     private void configureSwerveModule() {
-        driveConfiguration.closedloopRamp = 0.2;
+        driveConfiguration.closedloopRamp = 0.08;
+        driveConfiguration.peakCurrentLimit = 50;
+        driveConfiguration.peakOutputForward = 0.7;
+        driveConfiguration.peakOutputReverse = -0.7;
 
         turnConfiguration.feedbackNotContinuous = false;
 

@@ -47,23 +47,26 @@ public class SwerveDrivetrain extends SubsystemBase implements SwerveConstants {
   private WPI_Pigeon2 pigeon2;
 
   public SwerveDrivetrain() {
-    frontRightSwerveModule = new SwerveModule(3, 6,
+    frontRightSwerveModule = new SwerveModule(1, 0, false,
         ModuleNames.FRONT_RIGHT,
         () -> HOME_ANALOG_ENC_POS_FRONT_RIGHT,
-        new Tuple2<Integer>(4, 4));
+        new Tuple2<Integer>(0, 99));
 
-    frontLeftSwerveModule = new SwerveModule(7, 8,
+    frontLeftSwerveModule = new SwerveModule(2, 3, true,
         ModuleNames.FRONT_LEFT,
         () -> HOME_ANALOG_ENC_POS_FRONT_LEFT,
-        new Tuple2<Integer>(5, 6));
+        new Tuple2<Integer>(1, 99));
 
-    backLeftSwerveModule = new SwerveModule(4, 1,
+    backLeftSwerveModule = new SwerveModule(5, 4, true, 
         ModuleNames.BACK_LEFT,
+        () -> -0.07777777777, //change to backleft!
+        new Tuple2<Integer>(3, 99));
+    
+    backRightSwerveModule = new SwerveModule(7, 6, false,
+        ModuleNames.BACK_RIGHT,
         () -> -0.0, //change to backleft!
-        new Tuple2<Integer>(1, 3));
+        new Tuple2<Integer>(2, 99));
 
-    // backRightSwerveModule = new SwerveModule(6,7,
-    // ModuleNames.BACK_RIGHT, BACK, new Tuple2<Integer>(6, 7));
 
     pigeon2 = new WPI_Pigeon2(SensorConstants.PIGEON_ID);
 
@@ -124,6 +127,8 @@ public class SwerveDrivetrain extends SubsystemBase implements SwerveConstants {
         return frontRightSwerveModule;
       case BACK_LEFT:
         return backLeftSwerveModule;
+      case BACK_RIGHT:
+        return backRightSwerveModule;
 
       default:
         break;

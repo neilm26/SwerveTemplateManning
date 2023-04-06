@@ -21,7 +21,7 @@ public interface SwerveConstants {
     public double HOME_ANALOG_ENC_POS_FRONT_LEFT = 0.1111111; //offsets necessary to zero out encoders
     public double HOME_ANALOG_ENC_POS_BACK_LEFT = 0.19444444444;
 
-    public double MAX_SPEED = 10.0;
+    public double MAX_SPEED = 1.0;
     public double MAX_ACCEL = 5.0;
 
     //Driving encoder gear of module MK1 is 48 teeth.
@@ -46,7 +46,7 @@ public interface SwerveConstants {
         FRONT_LEFT,
         FRONT_RIGHT,
         BACK_LEFT,
-        // BACK_RIGHT
+        BACK_RIGHT
     }
 
 }

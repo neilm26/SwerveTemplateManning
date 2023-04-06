@@ -10,6 +10,8 @@ import java.util.function.Supplier;
 
 import org.opencv.core.Mat;
 
+import com.fasterxml.jackson.annotation.JsonCreator.Mode;
+
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -41,18 +43,21 @@ public class ChassisControl extends CommandBase {
     FLmodule = drivetrain.getModule(ModuleNames.FRONT_LEFT);
     FRmodule = drivetrain.getModule(ModuleNames.FRONT_RIGHT);
     BLmodule = drivetrain.getModule(ModuleNames.BACK_LEFT);
+    BRmodule = drivetrain.getModule(ModuleNames.BACK_RIGHT);
   }
 
   // Called every time the scheduler runs while the command is scheduled.
   @Override
   public void execute() {
-    drivetrain.setCentralMotion(new ChassisSpeeds(leftXAxis.get(), leftYAxis.get(), rightXAxis.get() * Math.PI));
+    drivetrain.setCentralMotion(new ChassisSpeeds(leftXAxis.get(), leftYAxis.get(), rightXAxis.get() * Math.PI / 2));
     for (Entry<ModuleNames, SwerveModuleState> state: SwerveDrivetrain.stateMap.entrySet()) {
       SmartDashboard.putNumberArray(state.getKey().toString(), new Double[] {state.getValue().angle.getDegrees(), state.getValue().speedMetersPerSecond});
     }
 
     FLmodule.setDesiredState(drivetrain.getModuleState(ModuleNames.FRONT_LEFT));
     FRmodule.setDesiredState(drivetrain.getModuleState(ModuleNames.FRONT_RIGHT));
+    BLmodule.setDesiredState(drivetrain.getModuleState(ModuleNames.BACK_LEFT));
+    BRmodule.setDesiredState(drivetrain.getModuleState(ModuleNames.BACK_RIGHT));
   }
 
   // Called once the command ends or is interrupted.
