@@ -49,7 +49,7 @@ public class ChassisControl extends CommandBase {
   // Called every time the scheduler runs while the command is scheduled.
   @Override
   public void execute() {
-    drivetrain.setCentralMotion(new ChassisSpeeds(leftXAxis.get(), leftYAxis.get(), rightXAxis.get() * Math.PI / 2));
+    drivetrain.setCentralMotion(new ChassisSpeeds(leftXAxis.get(), leftYAxis.get(), rightXAxis.get() * Math.PI));
     for (Entry<ModuleNames, SwerveModuleState> state: SwerveDrivetrain.stateMap.entrySet()) {
       SmartDashboard.putNumberArray(state.getKey().toString(), new Double[] {state.getValue().angle.getDegrees(), state.getValue().speedMetersPerSecond});
     }
