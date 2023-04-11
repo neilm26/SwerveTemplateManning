@@ -12,6 +12,7 @@ import org.opencv.core.Mat;
 
 import com.fasterxml.jackson.annotation.JsonCreator.Mode;
 
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -24,16 +25,21 @@ public class ChassisControl extends CommandBase {
   /** Creates a new ChassisControl. */
   private SwerveDrivetrain drivetrain;
   private SwerveModule FLmodule, FRmodule, BLmodule, BRmodule;
-  private Supplier<Double> leftXAxis, leftYAxis, rightXAxis;
+  private Supplier<Double> leftXAxis, leftYAxis, leftTrigger, rightTrigger;
+  private Supplier<Boolean> fieldCentric;
   public ChassisControl(SwerveDrivetrain drivetrain, 
                 Supplier<Double> leftXAxis, 
                 Supplier<Double> leftYAxis,
-                Supplier<Double> rightXAxis) {
+                Supplier<Double> leftTrigger,
+                Supplier<Double> rightTrigger,
+                Supplier<Boolean> fieldCentric) {
     // Use addRequirements() here to declare subsystem dependencies.
     this.drivetrain = drivetrain;
     this.leftXAxis = leftXAxis;
     this.leftYAxis = leftYAxis;
-    this.rightXAxis = rightXAxis;
+    this.leftTrigger = leftTrigger;
+    this.rightTrigger = rightTrigger;
+    this.fieldCentric = fieldCentric;
     addRequirements(drivetrain);
   }
 
@@ -49,7 +55,14 @@ public class ChassisControl extends CommandBase {
   // Called every time the scheduler runs while the command is scheduled.
   @Override
   public void execute() {
-    drivetrain.setCentralMotion(new ChassisSpeeds(leftXAxis.get(), leftYAxis.get(), rightXAxis.get() * Math.PI));
+    double yaw = drivetrain.getPigeon().getYaw();
+    if (fieldCentric.get()) {
+      drivetrain.setCentralMotion(ChassisSpeeds.fromFieldRelativeSpeeds(leftXAxis.get(), leftYAxis.get(), 
+                    (leftTrigger.get()-rightTrigger.get()) * Math.PI, Rotation2d.fromDegrees(yaw)));
+      SmartDashboard.putNumber("Robot Heading relative to field", yaw);
+    } else {
+      drivetrain.setCentralMotion(new ChassisSpeeds(leftXAxis.get(), leftYAxis.get(), (leftTrigger.get()-rightTrigger.get()) * Math.PI));
+    }
     for (Entry<ModuleNames, SwerveModuleState> state: SwerveDrivetrain.stateMap.entrySet()) {
       SmartDashboard.putNumberArray(state.getKey().toString(), new Double[] {state.getValue().angle.getDegrees(), state.getValue().speedMetersPerSecond});
     }

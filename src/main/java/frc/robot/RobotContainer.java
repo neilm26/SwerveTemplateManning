@@ -42,7 +42,8 @@ public class RobotContainer implements SwerveConstants {
   private ChassisControl chassisControl = new ChassisControl(drivetrain,
       driverController::getLeftX,
       driverController::getLeftY, 
-      () -> driverController.getRawAxis(2));
+      () -> driverController.getRawAxis(3),
+      () -> driverController.getRawAxis(4), () -> true);
 
   private final EventLoop eventLoop = new EventLoop();
 
@@ -51,6 +52,11 @@ public class RobotContainer implements SwerveConstants {
 
     configureDriveRelative();
     configureBindings();
+    configureZeroHeading();
+  }
+
+  private void configureZeroHeading() {
+    drivetrain.getPigeon().setYaw(0);
   }
 
   private void configureBindings() {

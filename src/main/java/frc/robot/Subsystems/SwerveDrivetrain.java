@@ -13,6 +13,7 @@ import java.util.stream.IntStream;
 
 import org.opencv.core.Mat.Tuple2;
 
+import com.ctre.phoenix.sensors.Pigeon2;
 import com.ctre.phoenix.sensors.WPI_Pigeon2;
 
 import edu.wpi.first.math.controller.PIDController;
@@ -107,7 +108,7 @@ public class SwerveDrivetrain extends SubsystemBase implements SwerveConstants {
 
     SwerveModuleState[] states = driveKinematics.toSwerveModuleStates(this.chassisSpeeds);
 
-    SwerveDriveKinematics.desaturateWheelSpeeds(states, MAX_SPEED);
+    SwerveDriveKinematics.desaturateWheelSpeeds(states, 0.8);
 
     stateMap = IntStream.range(0, ModuleNames.values().length).boxed().collect(Collectors.toMap(
         i -> ModuleNames.values()[i],
@@ -134,6 +135,10 @@ public class SwerveDrivetrain extends SubsystemBase implements SwerveConstants {
         break;
     }
     return null;
+  }
+
+  public Pigeon2 getPigeon() {
+    return pigeon2;
   }
 
   public SwerveModuleState updateModuleState(double speed, double orientation, SwerveModule module) {

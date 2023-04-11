@@ -117,11 +117,18 @@ public class SwerveModule extends SubsystemBase implements SwerveConstants {
     }
 
     private void configureSwerveModule() {
-        driveConfiguration.closedloopRamp = 0.08;
-        driveConfiguration.peakCurrentLimit = 50;
-        driveConfiguration.peakOutputForward = 0.7;
-        driveConfiguration.peakOutputReverse = -0.7;
+        driveMotor.configFactoryDefault();
+        turnMotor.configFactoryDefault();
 
+        driveConfiguration.closedloopRamp = 0.08;
+        driveConfiguration.peakCurrentLimit = 30;
+        driveConfiguration.peakOutputForward = 0.4;
+        driveConfiguration.peakOutputReverse = -0.4;
+        driveConfiguration.peakCurrentDuration = 250;
+
+        
+        turnConfiguration.peakCurrentDuration = 30;
+        turnConfiguration.peakCurrentDuration = 250;
         turnConfiguration.feedbackNotContinuous = false;
 
         Utilities.attemptToConfigure(driveMotor.configAllSettings(turnConfiguration),
@@ -145,7 +152,7 @@ public class SwerveModule extends SubsystemBase implements SwerveConstants {
     }
 
     public double getModuleAngle() {
-        return (analogEncoder.getAbsolutePosition() - encoderOffset) * 360;
+        return (SwerveMath.clamp(analogEncoder.getAbsolutePosition() - encoderOffset)) * 360;
     }
 
     public double getTargetVel() {
@@ -172,20 +179,18 @@ public class SwerveModule extends SubsystemBase implements SwerveConstants {
         return moduleState;
     }
 
-    public void setDesiredState(SwerveModuleState currState) {
+    public void 
+    setDesiredState(SwerveModuleState currState) {
         // there is no selected sensor yet...
-        SmartDashboard.putNumber("encoder" + moduleName.toString(), getModuleAngle());
         double target = currState.angle.getDegrees();
-        if (target<=0) {
-            target+=360;
-        }
         setTargetAng(target);
+        
         swerveModuleHeading.getEntry().setDouble(getModuleAngle());
 
         final double driveOutput = drivePID.calculate(driveMotor.getSelectedSensorVelocity(),
                 currState.speedMetersPerSecond);
         final double driveFF = driveFeedForward.calculate(currState.speedMetersPerSecond);
-        final double[] constrainedTurning = SwerveMath.findFastestTurnDirection(
+        final double[] constrainedTurning = SwerveMath.calculateFastestTurn(
                 getModuleAngle(),
                 target, driveOutput);
 
@@ -193,7 +198,7 @@ public class SwerveModule extends SubsystemBase implements SwerveConstants {
         final double turnFF = angularFeedForward.calculate(angularPID.getSetpoint().velocity);
 
         turnMotor.set(ControlMode.PercentOutput, turnOutput);
-        driveMotor.set(ControlMode.PercentOutput, driveOutput);
+        driveMotor.set(ControlMode.PercentOutput, constrainedTurning[1]);
     }
 
     public boolean throwLostEncoderException() {
